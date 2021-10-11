@@ -8,6 +8,8 @@ var data_storage;
 var last_key = 0;
 
 async function readAllProducts() {
+    $('#product-container').html('');
+    $('#product-loader').css('display', 'block');
     $.ajax({
         url: '/customer/product',
         type: 'GET',
@@ -21,7 +23,7 @@ async function readAllProducts() {
                     
                     for (var i = 0; i < last_key; i++) {
                         if (typeof data_storage[i] != 'undefined') 
-                        html += getItems(data_storage[i]);
+                            html += getItems(data_storage[i]);
                     }
                     if(data_storage.length >= last_key){
                         enable_button = true;
@@ -52,12 +54,21 @@ function getItems (data) {
         }
             html += '<div style="background-color:#C4BFC2;"><img class="card-img-top cover" src="../images/'+ data.image +'" alt="product image"></div>';
             html += '<div class="card-body">';
-                var description = data.description.length > 60 ? data.description.substr(0, 60) + "..." : data.description;
-                html += '<h5 title=\"'+data.description+'"\ class="card-title description">'+ description  +'</h5><br>';
-                html += '<p class="card-text price-'+data.id+'">₱'+ formatNumber(data.selling_price) +'</p>';
-                html += '<span>Qty </span><input class="qty-'+data.id+'" type="number" min="1" value="1" style="width:50px; margin-right:5px;">';
-                html += '<button class="btn btn-sm btn-outline-success" data-id="'+data.id+'" data-product-code="'+data.product_code+'" id="btn-add-to-tray">';
+                var description = data.description.length > 60 ? data.description.substr(0, 50) + "..." : data.description;
+                html += '<div title=\"'+data.description+'"\ class="description">'+ description  +'</div>';
+                html += '<div class="d-flex">';
+                html += '<div class="card-text mr-2 mb-2 price-'+data.id+'">₱'+ formatNumber(data.selling_price) +'</div>';
+                var style = "";
+                if (data.qty == 0) {
+                    style = 'style="color:red"';    
+                }
+                html += '<div class="card-text"> Stock: <span class="stock-'+data.id+'" '+style+'>'+data.qty+'</span></div>';
+                html += '</div>';
+                html += '<div class="d-flex">';
+                html += '<span>Qty</span><input class="qty-'+data.id+'" type="number" min="1" value="1" style="width:50px; margin-left:5px;">';
+                html += '<button class="btn btn-sm btn-outline-success ml-2" data-id="'+data.id+'" data-product-code="'+data.product_code+'" id="btn-add-to-tray">';
                 html += 'Add to tray</button>';
+                html += '</div>';
             html +=' </div>';
         html += '</div>';
     html += '</div>'; 
@@ -91,11 +102,16 @@ async function readTray() {
             html += '<tr>';
             html += '<td></td>';
             html += '<td></td>';
+            html += '<td></td>';
             html += '<td><b>Total</b></td>';
             html += '<td><b id="total">₱'+ formatNumber(total) +'</b></td>';
             html += '<td></td>'
             html += '</tr>';
             $('.tbl-tray tbody').append(html);
+
+            if (data.length > 4) { 
+                $(".tray-container").scrollTop($(".tray-container")[0].scrollHeight);
+            }
         }
     });
 }
@@ -105,6 +121,8 @@ async function getTrayItems (data) {
     html += '<tr>';
     html += '<td>'+ data.product_code +'</td>';
     html += '<td>'+ data.description +'</td>';
+    html += '<td>'+ data.unit +'</td>';
+    html += '<td>'+ data.selling_price +'</td>';
     html += '<td>'+ data.qty_order +'</td>';
     html += '<td>₱'+ formatNumber(data.amount) +'</td>';
     html += '<td><a style="color:#1970F1;" class="btn btn-sm btn-void" data-id='+ data.id +'> Void</a></td>'
@@ -170,27 +188,53 @@ function formatNumber(total)
   return money_format = parseFloat(decimal).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
+async function getQtyInTray(product_code) {
+    await $.ajax({
+        url: 'cashiering/read-one-qty/'+product_code,
+        type: 'GET',
+        
+        success:async function(data){
+            var qty = isNaN(data.qty) ? 0 : data.qty;
+            localStorage.setItem("qty_in_tray", qty);
+        }
+    });
+}
+
 function on_Click () {
     
-    $(document).on('click', '#btn-add-to-tray', function(){
+    $(document).on('click', '#btn-add-to-tray', async function(){
+
         var product_code = $(this).attr('data-product-code');
-        var id = $(this).attr('data-id');
-        var qty = $('.qty-'+id).val();
-        var price = $('.price-'+id).text().slice(1).replace(",", ""); 
-        var amount  = parseInt(qty) * parseFloat(price);
-        $.ajax({
-            url: '/add-to-tray',
-            type: 'POST',
-            data: {
-                product_code : product_code,
-                qty : qty,
-                amount : amount
-            },
-            
-            success:async function(data){
-                await readTray();
-            }
-        });
+        var id           = $(this).attr('data-id');
+        var qty          = $('.qty-'+id).val();
+        var price        = $('.price-'+id).text().slice(1).replace(",", ""); 
+        var amount       = parseInt(qty) * parseFloat(price);
+        var stock        = $('.stock-'+id).text();
+
+        await getQtyInTray(product_code);
+
+        var qty_in_tray = localStorage.getItem("qty_in_tray");
+        var total_qty = parseInt(qty) + parseInt(qty_in_tray);
+        console.log(qty_in_tray)
+        if (stock < total_qty) {
+            alert("Not enough stock.")
+        }
+        else {
+           await $.ajax({
+                url: '/add-to-tray',
+                type: 'POST',
+                data: {
+                    product_code : product_code,
+                    qty : qty,
+                    amount : amount
+                },
+                
+                success:async function(){
+                    await readTray();
+                    localStorage.removeItem("qty_in_tray");
+                }
+            });
+        }
     });
 
     $(document).on('click', '.btn-load-more', function(){
@@ -239,9 +283,9 @@ function on_Click () {
 
     $(document).on('click', '#proccess', function(){
 
-        $(this).html("Plase wait...");
         var total = $('#total').text().slice(1).replace(",", ""); 
         var tendered = $('#tendered').val();
+        var invoice_no = $('#invoice-no').val();
 
         total = parseFloat(total);
         tendered = parseFloat(tendered);
@@ -252,41 +296,64 @@ function on_Click () {
                 alert('Tendered amount is less than total amount.');
             }
             else {
-                var payment_method = "Cash";
-                if ($('#gcash-payment').is(":checked")) {
-                    payment_method = "GCash"
-                }
-                $.ajax({
-                    url: '/record-sale/',
-                    type: 'POST',
-                    data: {
-                        payment_method : payment_method
-                    },
-                    success:async function(res){
-                        console.log(res)
-                        if (res == 'success') {
-                            $('#change').val('');
-                            $('#tendered').val('');
-                            setTimeout(async function(){
-                                $('#proccess').html("Proccess")
+                if (invoice_no) {      
+                    $(this).html("Plase wait...");
+                    var payment_method = "Cash";
+                    if ($('#gcash-payment').is(":checked")) {
+                        payment_method = "GCash"
+                    }
+                    $.ajax({
+                        url: '/record-sale/',
+                        type: 'POST',
+                        data: {
+                            payment_method : payment_method,
+                            invoice_no     : invoice_no
+                        },
+                        success:async function(res){
+
+                            if (res == 'success') {
+
+                                await readAllProducts();
+                                
+                                $('#change').val('');
+                                $('#tendered').val('');
+                                $('#invoice-no').val('');
+                                $('#proccess').html("Proccess");
                                 $.toast({
                                     heading:'Transaction was successfully recorded.',
+                                    text:'Generating Invoice...',
                                     showHideTransition: 'plain',
                                     hideAfter: 4000, 
                                 });
-                                await readTray();
-                            },300);
+                                setTimeout(async function()
+                                {
+                                    window.open("/preview-invoice");
+                                    setTimeout(async function()
+                                    {
+                                        await readTray();
+                                    },300);
+                                },3000);
+
+                            }
+                            else if (res == 'invoice_exists') {
+                                $('#proccess').html("Proccess")
+                                alert('Invoice # is already exists.')
+                            }
+                            else {
+                                $.toast({
+                                    heading: 'Something went wrong',
+                                    text:'Please contact the development team',
+                                    showHideTransition: 'fade',
+                                    icon: 'error',
+                                    hideAfter: 4000, 
+                                });
+                            }
                         }
-                        else {
-                            $.toast({
-                                heading: 'Something went wrong',
-                                text:'Please contact the development team',
-                                showHideTransition: 'fade',
-                                icon: 'error'
-                            });
-                        }
-                    }
-                });
+                    });
+                }
+                else {
+                    alert('Please enter the Invoice #');
+                }
             }
         }
         else {
@@ -328,14 +395,14 @@ function on_Click () {
                     password : password
                 },
                 success:async function(res){
-                    console.log(res)
+                    $('#void-modal').modal('hide');
                     $('#btn-confirm-void').html('Void');
                     if (res == 'success') {
                         setTimeout(async function(){
                             $.toast({
                                 text:'Item was successfully void.',
                                 showHideTransition: 'plain',
-                                timeOut: 6500
+                                hideAfter: 4000, 
                             });
                             await readTray();
                         },300);

@@ -13,7 +13,8 @@ use App\Http\Controllers\Admin\StockAdjustmentController;
 use App\Http\Controllers\Admin\PurchaseOrderController;
 use App\Http\Controllers\Admin\StockAdjustmentReportController;
 use App\Http\Controllers\Admin\CashieringController;
-
+use App\Http\Controllers\Admin\SalesController;
+use App\Http\Controllers\Admin\SupplierDeliveryController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -58,7 +59,7 @@ Route::middleware('auth')->group(function () {
     Route::get('request-order', [PurchaseOrderController::class, 'readRequestOrderBySupplier']);
     Route::post('request-order/remove', [PurchaseOrderController::class, 'removeRequest']);
     Route::post('purchase-order', [PurchaseOrderController::class, 'purchaseOrder']);
-    Route::get('purchased-order', [PurchaseOrderController::class, 'readPurchasedOrderBySupplier']);
+    Route::get('purchased-order', [PurchaseOrderController::class, 'readPurchasedOrder']);
     Route::get('supplier-markup', [SupplierController::class, 'getMarkupBySupplier']);
     Route::get('reports/stock-adjustment', [StockAdjustmentReportController::class, 'index']);
     Route::get('reports/stock-adjustment/pdf/{date_from}/{date_to}', [StockAdjustmentReportController::class, 'pdf']);
@@ -67,8 +68,16 @@ Route::middleware('auth')->group(function () {
     Route::post('record-sale', [CashieringController::class, 'recordSale']);
     Route::post('add-to-tray', [CashieringController::class, 'addToTray']);
     Route::get('read-tray', [CashieringController::class, 'readTray']);
+    Route::get('cashiering/read-one-qty/{product_code}', [CashieringController::class, 'readOneQty']);
     Route::post('void/{id}', [CashieringController::class, 'void']);
+    Route::get('preview-invoice', [CashieringController::class, 'previewInvoice']);
+    Route::resource('reports/sales', SalesController::class);
+    Route::get('read-sales', [SalesController::class, 'readSales']);
+    Route::get('compute-total-sales', [SalesController::class, 'computeTotalSales']);
+    Route::get('reports/preview-sales/{date_from}/{date_to}/{order_from}/{payment_method}', [SalesController::class, 'previewSalesReport']);
+    Route::get('reports/download-sales/{date_from}/{date_to}/{order_from}/{payment_method}', [SalesController::class, 'downloadSalesReport']);
 
+    Route::resource('supplier-delivery', SupplierDeliveryController::class);
   //  Route::middleware('access_level:2')->group(function () {
   //      Route::resource('users', UserController::class);
   //  });

@@ -32,8 +32,16 @@
     {{ \Session::get('success') }}
   </div>
   @endif
-
-  <div class="row mt-4">
+<style>
+    thead{
+        position: sticky;
+        top: 0;
+        background-color: #FFF;
+        border-color: #C4BFC2;
+        z-index: 999;
+    }
+</style>
+  <div class="row mt-1">
         
     <div class="col-md-12 col-lg-12 mt-3">
       <div class="card">
@@ -42,10 +50,12 @@
                     <div class="col-sm-12 col-md-7">
                         <div class="row mr-2">
                             <div class="col-12 tray-container" style="overflow-y: auto; height:350px;">
-                                <table class="table responsive table-bordered table-hover tbl-tray" style=" margin-bottom:20px;">
+                                <table class="table responsive table-bordered table-hover tbl-tray" style="margin-bottom:20px;">
                                     <thead>
                                         <th width="150px">Product Code</th>
                                         <th>Description</th>
+                                        <th>Unit</th>
+                                        <th>Price</th>
                                         <th>Qty</th>
                                         <th>Amount</th>
                                         <th width="50px">Action</th>
@@ -57,16 +67,33 @@
                                     <div class="lds-default" id="tray-loader"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
                                 </div>
                             </div>
-                            <div class="col-md-12">
-                                <table class="table responsive table-bordered table-hover" style=" margin-bottom:20px;">
+                            <div class="col-md-12 mt-2">
+                                <table class="table responsive table-bordered" style=" margin-bottom:20px;">
                                     <tr>
                                         <th>Tendered</th>
-                                        <th><input type="number" id="tendered" step=".01" class="form-control"></th>
+                                        <th>
+                                            <div class="input-group mb-3">
+                                                <div class="input-group-prepend">
+                                                  <span class="input-group-text">&#8369</span>
+                                                </div>
+                                                <input  type="number" id="tendered" step=".01" class="form-control">
+                                            </div>
+                                        </th>
                                     </tr> 
                                     <tr>
                                         <th>Change</th>
-                                        <th><input type="number" id="change" step=".01" class="form-control" readonly></th>
-                                    </tr>     
+                                        <th>
+                                            <div class="input-group mb-3">
+                                                <div class="input-group-prepend">
+                                                  <span class="input-group-text">&#8369</span>
+                                                </div>
+                                                <input  type="number" id="change" step=".01" class="form-control" readonly>
+                                            </div></th>
+                                    </tr>  
+                                    <tr>
+                                        <th>Invoice #</th>
+                                        <th><input type="number" id="invoice-no" class="form-control"></th>
+                                    </tr>    
                                 </table>
                             </div>
                             <div class="col-sm-2 ml-1 mt-1">
@@ -76,7 +103,7 @@
                                   </div>
                             </div>
                             <div class="col-sm-3">
-                                <button class="btn btn-sm btn-success" id="proccess"><u>F2</u> Proccess</button>
+                                <button class="btn btn-sm btn-success" id="proccess">Proccess</button>
                             </div>
                             <div class="col-sm-12 mt-3 img-gcash-qr">
                                 <img width="300" height="300" src="{{asset('images/gcash.jpg')}}" alt="">
